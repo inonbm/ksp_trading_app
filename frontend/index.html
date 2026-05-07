@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KSP Trading Automation</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>KSP Trading Automation</h1>
+            <p>Automate your search and checkout process on KSP.</p>
+        </header>
+
+        <main>
+            <section class="card search-section">
+                <h2>Search Configuration</h2>
+                <form id="tradeForm">
+                    <div class="form-group">
+                        <label for="query">Product Query</label>
+                        <input type="text" id="query" name="query" placeholder="e.g., iPhone 15" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="maxPrice">Maximum Price (ILS)</label>
+                        <input type="number" id="maxPrice" name="max_price" placeholder="e.g., 4000" min="1" required>
+                    </div>
+                    <button type="submit" id="startBtn">
+                        <span>Start Automation</span>
+                    </button>
+                </form>
+            </section>
+
+            <section class="card status-section hidden" id="statusSection">
+                <h2>Status & Trace Logs</h2>
+                <div id="loadingIndicator" class="loading-container">
+                    <div class="spinner"></div>
+                    <p id="loadingMessage">Automation is running on KSP...</p>
+                </div>
+                
+                <div class="trace-container">
+                    <ul id="traceList" class="trace-list">
+                        <!-- Trace items will be inserted here -->
+                    </ul>
+                </div>
+            </section>
+
+            <section class="card results-section hidden" id="resultsSection">
+                <h2>Results & Checkout</h2>
+                <div class="success-message" id="successMessage">
+                    <!-- Success message will be inserted here -->
+                </div>
+                
+                <div class="product-details" id="productDetails">
+                    <h3 id="productTitle">Product Title</h3>
+                    <p class="product-price">Price: <span id="productPrice">0</span> ILS</p>
+                    <a href="#" id="productUrl" target="_blank" class="btn-secondary">View on KSP</a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
