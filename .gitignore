@@ -1,0 +1,18 @@
+# Environments
+venv/
+env/
+.env
+
+# Python Cache
+__pycache__/
+*.py[cod]
+
+# Playwright / Testing
+.pytest_cache/
+playwright-report/
+test-results/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
