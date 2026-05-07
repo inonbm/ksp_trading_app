@@ -23,7 +23,9 @@ async def add_to_cart_and_checkout(product: Product) -> None:
     """
     async with async_playwright() as p:
         # Launch browser in headed mode to pass bot checks and visually debug
-        browser = await p.chromium.launch(headless=False)
+        import os
+        headless_mode = os.getenv("PLAYWRIGHT_HEADLESS", "False").lower() == "true"
+        browser = await p.chromium.launch(headless=headless_mode, args=["--disable-blink-features=AutomationControlled"])
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
             viewport={"width": 1280, "height": 720}

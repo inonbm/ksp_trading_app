@@ -20,7 +20,9 @@ async def search_products(query: str, max_results: int = 5) -> List[Product]:
     
     async with async_playwright() as p:
         # Launch browser in non-headless mode for debugging and bypassing basic bot protections
-        browser = await p.chromium.launch(headless=False)
+        import os
+        headless_mode = os.getenv("PLAYWRIGHT_HEADLESS", "False").lower() == "true"
+        browser = await p.chromium.launch(headless=headless_mode, args=["--disable-blink-features=AutomationControlled"])
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
         )
