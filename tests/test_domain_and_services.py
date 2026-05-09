@@ -6,9 +6,10 @@ from automation.checkout_automation import get_cheapest_product
 
 def test_product_model_validation():
     """Test that the Product Pydantic model normalizes data correctly."""
-    # Valid product
     p = Product(id="1", title="Test", price=100.5, currency="ILS", product_url="http://test.com", source="KSP")
     assert p.price == 100.5
+    assert p.image_url is None
+    assert p.specs is None
 
     # String price is coerced to float
     p2 = Product(id="2", title="Test2", price="200.5", currency="ILS", product_url="http://test.com", source="KSP")
@@ -21,6 +22,18 @@ def test_product_model_validation():
     # Negative price raises ValidationError (ge=0 constraint)
     with pytest.raises(ValidationError):
         Product(id="4", title="Test4", price=-10.0, currency="ILS", product_url="http://test.com", source="KSP")
+
+
+def test_product_with_image_and_specs():
+    """Test optional image_url and specs fields."""
+    p = Product(
+        id="1", title="iPhone 15 128GB שחור", price=3499.0, currency="ILS",
+        product_url="http://test.com", source="KSP",
+        image_url="https://img.ksp.co.il/test.jpg",
+        specs="אחסון: 128 | צבע: שחור"
+    )
+    assert p.image_url == "https://img.ksp.co.il/test.jpg"
+    assert "אחסון" in p.specs
 
 
 def test_product_currency_normalization():
@@ -50,7 +63,7 @@ async def test_get_cheapest_product_empty_list():
 
 
 def test_cart_total_price():
-    """Test Cart.total_price computed property (Section 5 requirement)."""
+    """Test Cart.total_price computed property."""
     cart = Cart(items=[
         Product(id="1", title="P1", price=100.0, currency="ILS", product_url="http://1", source="KSP"),
         Product(id="2", title="P2", price=50.0, currency="ILS", product_url="http://2", source="KSP"),

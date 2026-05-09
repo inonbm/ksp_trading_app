@@ -4,65 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>בוט קניות KSP</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>בוט קניות KSP</h1>
-            <p>הגדר את החיפוש שלך והבוט יבצע את הרכישה עבורך באופן אוטומטי.</p>
+            <h1>🛒 בוט קניות KSP</h1>
+            <p>חפש מוצרים, השווה מחירים וקנה ישירות מ-KSP.</p>
         </header>
 
         <main>
             <section class="card search-section">
-                <h2>הגדרות חיפוש</h2>
+                <h2>חיפוש מוצרים</h2>
                 <form id="tradeForm">
-                    <div class="form-group">
-                        <label for="query">שם המוצר</label>
-                        <input type="text" id="query" name="query" placeholder="לדוגמה: iPhone 15" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="maxPrice">מחיר מקסימלי (₪)</label>
-                        <input type="number" id="maxPrice" name="max_price" placeholder="לדוגמה: 4000" min="1" required>
+                    <div class="form-row">
+                        <div class="form-group flex-grow">
+                            <label for="query">שם המוצר</label>
+                            <input type="text" id="query" name="query" placeholder="לדוגמה: אייפון 15, אוזניות, מסך..." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="maxPrice">מחיר מקסימלי (₪)</label>
+                            <input type="number" id="maxPrice" name="max_price" placeholder="4000" min="1" required>
+                        </div>
                     </div>
                     <button type="submit" id="startBtn" class="btn-primary">
-                        <span>התחל אוטומציה</span>
+                        <span>🔍 חפש מוצרים</span>
                     </button>
                 </form>
             </section>
 
+            <!-- Loading / Trace -->
             <section class="card status-section hidden" id="statusSection">
-                <h2>סטטוס ותהליכים</h2>
                 <div id="loadingIndicator" class="loading-container">
                     <div class="spinner"></div>
-                    <p id="loadingMessage">האוטומציה פועלת כעת ברקע...</p>
+                    <p id="loadingMessage">סורק את KSP... אנא המתן.</p>
                 </div>
-                
-                <div class="trace-container">
-                    <ul id="traceList" class="trace-list">
-                        <!-- שלבי המעקב יוצגו כאן -->
-                    </ul>
+                <div class="trace-container hidden" id="traceContainer">
+                    <ul id="traceList" class="trace-list"></ul>
                 </div>
             </section>
 
-            <section class="card results-section hidden" id="resultsSection">
-                <h2>תוצאות וקופה</h2>
-                <div class="success-message" id="successMessage">
-                    <!-- הודעת הצלחה תוצג כאן -->
+            <!-- Product Catalog Grid -->
+            <section class="catalog-section hidden" id="catalogSection">
+                <div class="catalog-header">
+                    <h2 id="catalogTitle">תוצאות חיפוש</h2>
+                    <span class="product-count" id="productCount"></span>
                 </div>
-                
-                <div class="product-details" id="productDetails">
-                    <h3 id="productTitle">שם המוצר</h3>
-                    <p class="product-price">מחיר: <span id="productPrice">0</span> ₪</p>
-                    <a href="#" id="productUrl" target="_blank" class="btn-secondary">צפה ב-KSP</a>
+                <div class="product-grid" id="productGrid">
+                    <!-- Product cards will be dynamically inserted -->
                 </div>
+            </section>
+
+            <!-- Error -->
+            <section class="card error-section hidden" id="errorSection">
+                <div class="error-message" id="errorMessage"></div>
             </section>
         </main>
     </div>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>

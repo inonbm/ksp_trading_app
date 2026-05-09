@@ -5,12 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from services.trading_service import run_trading_flow
 
-# Initialize basic configuration for JSON logs to print cleanly to the console
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 app = FastAPI(title="KSP Automation Trading API")
 
-# Setup CORS to allow the Vanilla JS frontend to communicate with this backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,19 +25,24 @@ class TradeRequest(BaseModel):
 @app.post("/api/trade")
 async def trade_endpoint(request: TradeRequest):
     """
-    Receives a trade request from the UI, triggers the trading flow orchestration,
-    and returns the result including trace details for the frontend to display.
+    Receives a trade request from the UI, triggers the scraping flow,
+    and returns the full sorted product catalog for storefront display.
     """
     request_id = str(uuid.uuid4())
 
     try:
         result = await run_trading_flow(query=request.query, request_id=request_id)
 
+        # Filter by max_price if provided
+        products = result.get("products", [])
+        if request.max_price is not None:
+            products = [p for p in products if p["price"] <= request.max_price]
+
         return {
             "status": "success",
             "requestId": request_id,
-            "product": result.get("product"),
-            "order_status": result.get("order_status"),
+            "products": products,
+            "total_found": len(products),
             "trace": [
                 {
                     "step_name": step["step"],

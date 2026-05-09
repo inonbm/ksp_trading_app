@@ -1,5 +1,6 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
+
 
 class Product(BaseModel):
     """
@@ -11,6 +12,9 @@ class Product(BaseModel):
     currency: str = Field(..., description="The currency of the price (e.g., ILS, USD)")
     product_url: str = Field(..., description="The direct URL to the product page")
     source: str = Field(..., description="The source website where the product was scraped from, e.g., 'KSP'")
+    image_url: Optional[str] = Field(default=None, description="URL of the product image")
+    specs: Optional[str] = Field(default=None, description="Extracted specs such as color, storage, size")
+
 
 class Cart(BaseModel):
     """
@@ -24,6 +28,7 @@ class Cart(BaseModel):
         Computed property to calculate the total price of all items in the cart.
         """
         return sum(item.price for item in self.items)
+
 
 class Order(BaseModel):
     """
