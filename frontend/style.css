@@ -1,16 +1,21 @@
 :root {
-    --bg-color: #f0f4f8;
-    --text-primary: #102a43;
-    --text-secondary: #486581;
-    --primary-color: #004bbf; /* KSP typical blueish theme or premium blue */
-    --primary-hover: #00368a;
-    --success-color: #10b981;
-    --error-color: #ef4444;
-    --card-bg: #ffffff;
-    --border-color: #d9e2ec;
-    --radius: 16px;
-    --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Premium Modern Mesh Gradient Colors */
+    --bg-gradient: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+    --card-bg: rgba(255, 255, 255, 0.85);
+    
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --primary-color: #3b82f6;
+    --primary-hover: #2563eb;
+    --success-color: #059669;
+    --error-color: #dc2626;
+    --border-color: rgba(226, 232, 240, 0.7);
+    --radius: 20px;
+    
+    /* Deep soft elevated shadow */
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    --hover-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 * {
@@ -21,18 +26,19 @@
 
 body {
     font-family: 'Assistant', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--bg-color);
+    background: var(--bg-gradient);
     color: var(--text-primary);
     line-height: 1.6;
     display: flex;
     justify-content: center;
+    align-items: center;
     min-height: 100vh;
-    padding: 3rem 1rem;
+    padding: 2rem 1rem;
     direction: rtl;
 }
 
 .container {
-    max-width: 650px;
+    max-width: 600px;
     width: 100%;
 }
 
@@ -42,39 +48,44 @@ header {
 }
 
 header h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-size: 2.8rem;
+    font-weight: 800;
     color: var(--primary-color);
     margin-bottom: 0.5rem;
-    letter-spacing: -0.5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 header p {
     color: var(--text-secondary);
-    font-size: 1.1rem;
+    font-size: 1.15rem;
+    font-weight: 500;
 }
 
+/* Glassmorphism Card */
 .card {
     background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: var(--radius);
-    padding: 2rem;
+    padding: 2.5rem;
     box-shadow: var(--shadow);
     margin-bottom: 1.5rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(255, 255, 255, 0.6);
     transition: var(--transition);
 }
 
 .card:hover {
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
-    transform: translateY(-2px);
+    box-shadow: var(--hover-shadow);
+    transform: translateY(-4px);
 }
 
 .card h2 {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     margin-bottom: 1.5rem;
     padding-bottom: 0.75rem;
     border-bottom: 2px solid var(--border-color);
     color: var(--text-primary);
+    font-weight: 700;
 }
 
 .form-group {
@@ -85,50 +96,54 @@ header p {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 1.05rem;
+    color: var(--text-primary);
 }
 
 .form-group input {
     width: 100%;
-    padding: 0.85rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
     font-family: inherit;
     font-size: 1.05rem;
     transition: var(--transition);
-    background-color: #f8fafc;
+    background-color: rgba(255, 255, 255, 0.9);
 }
 
 .form-group input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 4px rgba(0, 75, 191, 0.1);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
     background-color: #fff;
 }
 
 button.btn-primary {
     width: 100%;
-    padding: 1rem;
-    background-color: var(--primary-color);
+    padding: 1.15rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #2563eb 100%);
     color: white;
     border: none;
-    border-radius: 10px;
-    font-size: 1.1rem;
+    border-radius: 12px;
+    font-size: 1.2rem;
     font-weight: 700;
     cursor: pointer;
     transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 button.btn-primary:hover:not(:disabled) {
-    background-color: var(--primary-hover);
-    transform: scale(1.02);
+    background: linear-gradient(135deg, var(--primary-hover) 0%, #1d4ed8 100%);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-2px);
 }
 
 button:disabled {
-    opacity: 0.65;
+    background: #94a3b8;
+    box-shadow: none;
     cursor: not-allowed;
     transform: none;
 }
@@ -137,23 +152,26 @@ button:disabled {
     display: none !important;
 }
 
-/* Loading Spinner */
+/* Loading Spinner - Professional CSS Loader */
 .loading-container {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: center;
+    gap: 1.25rem;
     margin-bottom: 1.5rem;
     color: var(--primary-color);
     font-weight: 600;
+    font-size: 1.1rem;
+    padding: 1rem;
 }
 
 .spinner {
-    width: 28px;
-    height: 28px;
-    border: 3px solid rgba(0, 75, 191, 0.2);
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(59, 130, 246, 0.2);
     border-top-color: var(--primary-color);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
 }
 
 @keyframes spin {
@@ -162,9 +180,9 @@ button:disabled {
 
 /* Trace Logs */
 .trace-container {
-    background-color: #f8fafc;
-    border-radius: 10px;
-    padding: 1rem;
+    background-color: rgba(248, 250, 252, 0.8);
+    border-radius: 12px;
+    padding: 1.25rem;
     border: 1px solid var(--border-color);
     max-height: 250px;
     overflow-y: auto;
@@ -175,11 +193,11 @@ button:disabled {
 }
 
 .trace-item {
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
 
 .trace-item:last-child {
@@ -192,68 +210,80 @@ button:disabled {
 }
 
 .trace-time {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
+    color: var(--primary-color);
+    font-size: 0.9rem;
     font-family: monospace;
-    direction: ltr; /* keep time LTR */
+    font-weight: 700;
+    direction: ltr;
 }
 
 /* Results */
 .success-message {
-    padding: 1.25rem;
+    padding: 1.5rem;
     background-color: rgba(16, 185, 129, 0.1);
     color: var(--success-color);
-    border-radius: 10px;
+    border-radius: 12px;
     margin-bottom: 1.5rem;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 1.1rem;
     text-align: center;
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .error-message {
-    padding: 1.25rem;
+    padding: 1.5rem;
     background-color: rgba(239, 68, 68, 0.1);
     color: var(--error-color);
-    border-radius: 10px;
+    border-radius: 12px;
     margin-bottom: 1.5rem;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 1.1rem;
     text-align: center;
+    border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .product-details {
     text-align: center;
-    background-color: #f8fafc;
-    padding: 2rem;
-    border-radius: 10px;
+    background-color: rgba(248, 250, 252, 0.8);
+    padding: 2.5rem 1.5rem;
+    border-radius: 16px;
     border: 1px solid var(--border-color);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
 
 #productTitle {
-    font-size: 1.4rem;
-    margin-bottom: 0.75rem;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
     color: var(--text-primary);
-    line-height: 1.4;
+    line-height: 1.3;
 }
 
 .product-price {
-    font-size: 1.75rem;
-    font-weight: 700;
+    font-size: 2.2rem;
+    font-weight: 800;
     color: var(--primary-color);
     margin-bottom: 1.5rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .btn-secondary {
     display: inline-block;
-    padding: 0.85rem 2rem;
+    padding: 1rem 2.5rem;
     background-color: white;
     color: var(--primary-color);
     border: 2px solid var(--primary-color);
-    border-radius: 10px;
+    border-radius: 12px;
     text-decoration: none;
     font-weight: 700;
+    font-size: 1.1rem;
     transition: var(--transition);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
 .btn-secondary:hover {
     background-color: var(--primary-color);
     color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(59, 130, 246, 0.2);
 }

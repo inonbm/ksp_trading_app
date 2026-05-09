@@ -33,10 +33,19 @@ async def search_products(query: str, max_results: int = 5) -> List[Product]:
             logger.info(f"Navigating to {url} to emulate human search")
             await page.goto(url, wait_until="domcontentloaded")
             
+            logger.info("Dismissing any potential popups...")
+            await page.keyboard.press("Escape")
+            
             logger.info("Locating search input...")
-            # Generic selector for robust search input finding
-            search_input = page.locator('input[type="search"], input[placeholder*="חיפוש"]').first
-            await search_input.wait_for(state="visible", timeout=15000)
+            try:
+                # Use get_by_placeholder with regex for Hebrew/English
+                search_input = page.get_by_placeholder(re.compile(r"חפש|חיפוש|search", re.IGNORECASE)).first
+                await search_input.wait_for(state="visible", timeout=8000)
+            except Exception:
+                logger.warning("Primary search locator failed. Trying fallback locator...")
+                search_input = page.locator('input[type="search"], input[type="text"]').first
+                await search_input.wait_for(state="visible", timeout=8000)
+                
             await search_input.fill(query)
             await search_input.press("Enter")
             logger.info(f"Submitted search for: {query}")
