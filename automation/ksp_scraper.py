@@ -46,9 +46,10 @@ async def search_products(query: str, max_results: int = 5) -> List[Product]:
                 search_input = page.locator('input[type="search"], input[type="text"]').first
                 await search_input.wait_for(state="visible", timeout=8000)
                 
-            await search_input.fill(query)
-            await search_input.press("Enter")
-            logger.info(f"Submitted search for: {query}")
+            await search_input.click()
+            await page.keyboard.type(query, delay=50)
+            logger.info(f"Typed query: {query}. Submitting search...")
+            await page.keyboard.press("Enter")
             
             # Explicitly wait for the product grid/items to load.
             # Using a generalized selector that looks for links containing '/web/item/'
