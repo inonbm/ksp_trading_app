@@ -29,9 +29,17 @@ async def search_products(query: str, max_results: int = 5) -> List[Product]:
         page = await context.new_page()
         
         try:
-            url = f"https://ksp.co.il/web/search?q={query}"
-            logger.info(f"Navigating to {url}")
+            url = "https://ksp.co.il/"
+            logger.info(f"Navigating to {url} to emulate human search")
             await page.goto(url, wait_until="domcontentloaded")
+            
+            logger.info("Locating search input...")
+            # Generic selector for robust search input finding
+            search_input = page.locator('input[type="search"], input[placeholder*="חיפוש"]').first
+            await search_input.wait_for(state="visible", timeout=15000)
+            await search_input.fill(query)
+            await search_input.press("Enter")
+            logger.info(f"Submitted search for: {query}")
             
             # Explicitly wait for the product grid/items to load.
             # Using a generalized selector that looks for links containing '/web/item/'

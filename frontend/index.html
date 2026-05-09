@@ -1,44 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KSP Trading Automation</title>
+    <title>בוט קניות KSP</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>KSP Trading Automation</h1>
-            <p>Automate your search and checkout process on KSP.</p>
+            <h1>בוט קניות KSP</h1>
+            <p>הגדר את החיפוש שלך והבוט יבצע את הרכישה עבורך באופן אוטומטי.</p>
         </header>
 
         <main>
             <section class="card search-section">
-                <h2>Search Configuration</h2>
+                <h2>הגדרות חיפוש</h2>
                 <form id="tradeForm">
                     <div class="form-group">
-                        <label for="query">Product Query</label>
-                        <input type="text" id="query" name="query" placeholder="e.g., iPhone 15" required>
+                        <label for="query">שם המוצר</label>
+                        <input type="text" id="query" name="query" placeholder="לדוגמה: iPhone 15" required>
                     </div>
                     <div class="form-group">
-                        <label for="maxPrice">Maximum Price (ILS)</label>
-                        <input type="number" id="maxPrice" name="max_price" placeholder="e.g., 4000" min="1" required>
+                        <label for="maxPrice">מחיר מקסימלי (₪)</label>
+                        <input type="number" id="maxPrice" name="max_price" placeholder="לדוגמה: 4000" min="1" required>
                     </div>
-                    <button type="submit" id="startBtn">
-                        <span>Start Automation</span>
+                    <button type="submit" id="startBtn" class="btn-primary">
+                        <span>התחל אוטומציה</span>
                     </button>
                 </form>
             </section>
 
             <section class="card status-section hidden" id="statusSection">
-                <h2>Status & Trace Logs</h2>
+                <h2>סטטוס ותהליכים</h2>
                 <div id="loadingIndicator" class="loading-container">
                     <div class="spinner"></div>
-                    <p id="loadingMessage">Automation is running on KSP...</p>
+                    <p id="loadingMessage">האוטומציה פועלת כעת ברקע...</p>
                 </div>
                 
                 <div class="trace-container">
@@ -49,15 +49,15 @@
             </section>
 
             <section class="card results-section hidden" id="resultsSection">
-                <h2>Results & Checkout</h2>
+                <h2>תוצאות וקופה</h2>
                 <div class="success-message" id="successMessage">
                     <!-- Success message will be inserted here -->
                 </div>
                 
                 <div class="product-details" id="productDetails">
-                    <h3 id="productTitle">Product Title</h3>
-                    <p class="product-price">Price: <span id="productPrice">0</span> ILS</p>
-                    <a href="#" id="productUrl" target="_blank" class="btn-secondary">View on KSP</a>
+                    <h3 id="productTitle">שם המוצר</h3>
+                    <p class="product-price">מחיר: <span id="productPrice">0</span> ₪</p>
+                    <a href="#" id="productUrl" target="_blank" class="btn-secondary">צפה ב-KSP</a>
                 </div>
             </section>
         </main>

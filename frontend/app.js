@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxPrice = parseFloat(document.getElementById('maxPrice').value);
 
         if (!query || isNaN(maxPrice)) {
-            alert('Please provide valid query and max price.');
+            alert('נא להזין מוצר ומחיר מקסימלי תקינים.');
             return;
         }
 
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || `Server error: ${response.status}`);
+                throw new Error(errorData.detail || `שגיאת שרת: ${response.status}`);
             }
 
             const data = await response.json();
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setLoadingState(isLoading, requestFinished = false) {
         if (isLoading) {
             startBtn.disabled = true;
-            startBtn.innerHTML = '<span>Processing...</span>';
+            startBtn.innerHTML = '<span>מעבד נתונים...</span>';
             
             // Reset and show status section
             statusSection.classList.remove('hidden');
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             successMessage.textContent = '';
         } else {
             startBtn.disabled = false;
-            startBtn.innerHTML = '<span>Start Automation</span>';
+            startBtn.innerHTML = '<span>התחל אוטומציה</span>';
             if (requestFinished) {
                 loadingIndicator.classList.add('hidden');
             }
@@ -101,15 +101,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </li>
             `).join('');
         } else {
-            traceList.innerHTML = '<li class="trace-item"><span class="trace-step">No trace data available</span></li>';
+            traceList.innerHTML = '<li class="trace-item"><span class="trace-step">אין נתוני מעקב</span></li>';
         }
 
         // Render product data
         successMessage.className = 'success-message';
-        successMessage.textContent = 'Automation completed successfully!';
+        successMessage.textContent = 'האוטומציה הושלמה בהצלחה!';
         
         if (data.product) {
-            productTitle.textContent = data.product.title || 'Unknown Product';
+            productTitle.textContent = data.product.title || 'מוצר לא ידוע';
             productPrice.textContent = data.product.price || '0';
             
             if (data.product.url) {
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 productUrl.style.display = 'none';
             }
         } else {
-            productTitle.textContent = 'No product found within criteria';
+            productTitle.textContent = 'לא נמצא מוצר העונה לדרישות';
             productPrice.textContent = '0';
             productUrl.style.display = 'none';
         }
@@ -134,11 +134,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Show error message
         successMessage.className = 'error-message';
-        successMessage.textContent = `Error: ${errorMessage}`;
+        successMessage.textContent = `שגיאה בביצוע התהליך: ${errorMessage}`;
         
         traceList.innerHTML = `
             <li class="trace-item" style="color: var(--error-color)">
-                <span class="trace-step">Process failed</span>
+                <span class="trace-step">התהליך נכשל</span>
             </li>
         `;
     }
