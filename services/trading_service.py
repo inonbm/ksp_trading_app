@@ -41,7 +41,7 @@ async def run_trading_flow(query: str, request_id: str) -> dict:
         raise e
         
     if not products:
-        raise ValueError(f"No products found for query: '{query}'")
+        raise ValueError(f"לא נמצאו מוצרים עבור החיפוש: '{query}'")
 
     # Step 2: Get Cheapest Product
     start_time = time.time()
