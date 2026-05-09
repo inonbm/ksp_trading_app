@@ -10,7 +10,7 @@ from domain.models import Product
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-MAX_RETRIES = 2
+MAX_RETRIES = 3
 
 
 async def search_products(query: str, max_results: int = 5) -> List[Product]:
@@ -26,8 +26,8 @@ async def search_products(query: str, max_results: int = 5) -> List[Product]:
             logger.warning(f"Search attempt {attempt}/{MAX_RETRIES} returned 0 products.")
         except Exception as e:
             logger.warning(f"Search attempt {attempt}/{MAX_RETRIES} failed: {e}")
-            if attempt == MAX_RETRIES:
-                raise
+        if attempt < MAX_RETRIES:
+            logger.info(f"Retrying in 2 seconds...")
     return []
 
 
@@ -50,11 +50,10 @@ async def _search_products_attempt(query: str, max_results: int) -> List[Product
 
         try:
             url = "https://ksp.co.il/"
-            logger.info(f"[Attempt] Navigating to {url} to emulate human search")
+            logger.info(f"[Attempt] Navigating to {url}")
             await page.goto(url, wait_until="domcontentloaded")
 
-            # Dismiss any potential newsletter/ad/cookie popups
-            logger.info("Dismissing any potential popups...")
+            # Dismiss any newsletter/ad/cookie popups
             await page.keyboard.press("Escape")
 
             # Locate search input with fallback strategy
@@ -67,105 +66,64 @@ async def _search_products_attempt(query: str, max_results: int) -> List[Product
                 search_input = page.locator('input[type="search"], input[type="text"]').first
                 await search_input.wait_for(state="visible", timeout=8000)
 
-            # Click to focus, use page.keyboard to avoid stale locator after auto-suggest
+            # Click to focus, then type using page.keyboard to avoid stale locator
             await search_input.click()
             await page.keyboard.type(query, delay=50)
-            logger.info(f"Typed query: {query}. Submitting search...")
+            logger.info(f"Typed query: {query}. Submitting...")
             await page.keyboard.press("Enter")
 
-            # Wait for the search results page to load
-            # KSP search URL becomes /web/cat/search=... after Enter
-            logger.info("Waiting for search results page to load...")
+            # Wait for the search results page to fully load
+            logger.info("Waiting for search results page...")
             await page.wait_for_load_state("domcontentloaded", timeout=15000)
 
-            # KSP lazy-loads the product grid — scroll down to trigger rendering
-            logger.info("Scrolling to trigger lazy-loaded product grid...")
-            await page.evaluate("window.scrollBy(0, 600)")
+            # Scroll down aggressively to trigger lazy-loaded product grid
+            # KSP renders filters/brands first, product cards appear lower
+            for scroll_step in range(4):
+                await page.evaluate("window.scrollBy(0, 500)")
+                logger.info(f"Scrolled down (step {scroll_step + 1}/4)")
 
-            # Try multiple selectors — KSP uses CSS Modules with dynamic class suffixes
-            # Priority 1: productTitle links (most precise)
-            # Priority 2: generic item links (broader fallback)
-            item_elements = None
-            used_selector = ""
+            # Wait briefly for lazy-loaded content to render after scrolling
+            try:
+                await page.wait_for_load_state("networkidle", timeout=5000)
+            except Exception:
+                pass  # networkidle might not fire; that's ok
 
-            for selector in ['a[class*="productTitle"]', 'a[href*="/web/item/"]']:
-                try:
-                    logger.info(f"Trying selector: {selector}")
-                    await page.wait_for_selector(selector, timeout=15000)
-                    count = await page.locator(selector).count()
-                    if count > 0:
-                        item_elements = page.locator(selector)
-                        used_selector = selector
-                        logger.info(f"Found {count} elements with selector: {selector}")
-                        break
-                except Exception:
-                    logger.warning(f"Selector '{selector}' timed out. Trying next...")
+            # KSP uses CSS Modules: a[class*="productTitle"] targets only search result titles
+            # This EXCLUDES promoted carousels, sliders, and banners which don't use this class
+            product_title_selector = 'a[class*="productTitle"]'
+            logger.info(f"Looking for product titles: {product_title_selector}")
 
-            if not item_elements:
-                logger.error("No product elements found with any selector.")
+            try:
+                await page.wait_for_selector(product_title_selector, timeout=15000)
+            except Exception:
+                logger.error("Product title elements not found. The grid may not have loaded.")
                 return products
 
-            count = await item_elements.count()
+            title_elements = page.locator(product_title_selector)
+            count = await title_elements.count()
+            logger.info(f"Found {count} product title elements in search grid.")
 
             for i in range(min(count, max_results)):
                 try:
-                    el = item_elements.nth(i)
+                    title_el = title_elements.nth(i)
 
-                    # Extract href for product URL
-                    href = await el.get_attribute("href")
+                    # --- TITLE ---
+                    title = (await title_el.inner_text()).strip()
+                    if not title or len(title) < 3:
+                        continue
+
+                    # --- URL ---
+                    href = await title_el.get_attribute("href")
                     if not href or "/web/item/" not in href:
                         continue
                     product_url = f"https://ksp.co.il{href}" if href.startswith("/") else href
 
-                    # Extract title
-                    if used_selector == 'a[class*="productTitle"]':
-                        # Title is the text of the productTitle link itself
-                        title = (await el.inner_text()).strip()
-                    else:
-                        # For generic links, extract text from the card
-                        inner_text = await el.inner_text()
-                        lines = [l.strip() for l in inner_text.split("\n") if l.strip()]
-                        title = lines[0] if lines and len(lines[0]) > 3 else "Unknown"
-
-                    if not title or len(title) < 3:
-                        continue
-
-                    # Extract price from the product card context
-                    price_float = 0.0
-
-                    # Walk up to the parent card container and extract price
-                    try:
-                        # Try the parent container (product card wraps title + price)
-                        card = el.locator("xpath=ancestor::div[.//span[contains(text(),'₪')] or .//div[contains(text(),'₪')]]").first
-                        card_text = await card.inner_text()
-                    except Exception:
-                        # Fallback: use the immediate parent
-                        try:
-                            parent = el.locator("xpath=../..")
-                            card_text = await parent.inner_text()
-                        except Exception:
-                            continue
-
-                    # Parse price from card text
-                    for line in card_text.split("\n"):
-                        line = line.strip()
-                        # Skip the title line and Eilat price lines
-                        if line == title or "אילת" in line:
-                            continue
-                        # Match price: number with optional commas + ₪ (in either order)
-                        price_match = re.search(r'([\d,]+(?:\.\d+)?)\s*₪|₪\s*([\d,]+(?:\.\d+)?)', line)
-                        if price_match:
-                            raw = (price_match.group(1) or price_match.group(2)).replace(",", "")
-                            try:
-                                candidate = float(raw)
-                                if candidate > 10:  # Valid prices > 10 ILS
-                                    price_float = candidate
-                                    break
-                            except ValueError:
-                                continue
+                    # --- PRICE ---
+                    # Walk up to the nearest ancestor that contains a ₪ price
+                    price_float = await _extract_price_from_card(title_el, title)
 
                     if price_float == 0.0:
-                        logger.warning(f"Could not extract price for '{title[:30]}'. Skipping.")
+                        logger.warning(f"No price for '{title[:30]}'. Skipping.")
                         continue
 
                     product = Product(
@@ -177,15 +135,68 @@ async def _search_products_attempt(query: str, max_results: int) -> List[Product
                         source="KSP"
                     )
                     products.append(product)
-                    logger.info(f"Mapped: {product.title[:40]}... | {product.price} ILS")
+                    logger.info(f"✓ {product.title[:50]} | {product.price} ₪")
 
                 except Exception as ex:
-                    logger.warning(f"Error extracting product #{i}: {ex}. Skipping.")
+                    logger.warning(f"Error on product #{i}: {ex}. Skipping.")
                     continue
 
         finally:
-            logger.info("Closing browser cleanly.")
+            logger.info("Closing browser.")
             await context.close()
             await browser.close()
 
     return products
+
+
+async def _extract_price_from_card(title_el, title_text: str) -> float:
+    """
+    Extracts the product price by traversing up the DOM from the title element
+    to find the containing card, then searching for ₪-formatted prices.
+    Skips the title text line and Eilat price lines.
+    """
+    # Try progressively larger ancestor scopes
+    for xpath_expr in [
+        "xpath=ancestor::div[1]",      # immediate parent div
+        "xpath=ancestor::div[2]",      # grandparent div
+        "xpath=ancestor::div[3]",      # great-grandparent
+    ]:
+        try:
+            ancestor = title_el.locator(xpath_expr)
+            card_text = await ancestor.inner_text()
+
+            price = _parse_price_from_text(card_text, title_text)
+            if price > 0:
+                return price
+        except Exception:
+            continue
+
+    return 0.0
+
+
+def _parse_price_from_text(text: str, title_to_skip: str) -> float:
+    """
+    Parses a price (float) from a block of text.
+    Requires ₪ symbol to be present. Skips the title line and Eilat prices.
+    """
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        # Skip the title line itself
+        if line == title_to_skip:
+            continue
+        # Skip Eilat price lines
+        if "אילת" in line:
+            continue
+        # Match: "1,234₪" or "₪1,234" or "1,234 ₪" or "₪ 1,234"
+        match = re.search(r'([\d,]+(?:\.\d+)?)\s*₪|₪\s*([\d,]+(?:\.\d+)?)', line)
+        if match:
+            raw = (match.group(1) or match.group(2)).replace(",", "")
+            try:
+                price = float(raw)
+                if price > 10:  # Valid product prices are > 10 ₪
+                    return price
+            except ValueError:
+                continue
+    return 0.0
