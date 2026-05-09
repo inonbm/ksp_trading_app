@@ -2,7 +2,7 @@ import uuid
 import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from services.trading_service import run_trading_flow
 
 # Initialize basic configuration for JSON logs to print cleanly to the console
@@ -20,29 +20,37 @@ app.add_middleware(
 )
 
 class TradeRequest(BaseModel):
-    query: str
+    """Input validation for the trade request from the UI (Section 4.2)."""
+    query: str = Field(..., min_length=1, description="Product search query")
+    max_price: float = Field(default=None, ge=0, description="Optional maximum price filter in ILS")
 
 @app.post("/api/trade")
 async def trade_endpoint(request: TradeRequest):
     """
     Receives a trade request from the UI, triggers the trading flow orchestration,
-    and returns the result. Includes top-level error handling.
+    and returns the result including trace details for the frontend to display.
     """
-    # Generate unique ID immediately
     request_id = str(uuid.uuid4())
-    
+
     try:
-        # Pass the execution down to the Services layer
         result = await run_trading_flow(query=request.query, request_id=request_id)
-        
+
         return {
             "status": "success",
             "requestId": request_id,
-            "data": result
+            "product": result.get("product"),
+            "order_status": result.get("order_status"),
+            "trace": [
+                {
+                    "step_name": step["step"],
+                    "execution_time": step["execution_time"],
+                    "status": step["status"]
+                }
+                for step in result.get("trace_details", [])
+            ]
         }
     except Exception as e:
-        # If the automation or service layers fail, catch it here and return a friendly 500 error
         raise HTTPException(
-            status_code=500, 
-            detail=f"Trading automation flow failed: {str(e)}. Check backend observability logs using Request ID: {request_id}"
+            status_code=500,
+            detail=f"שגיאה בתהליך האוטומציה: {str(e)}. מזהה בקשה: {request_id}"
         )
