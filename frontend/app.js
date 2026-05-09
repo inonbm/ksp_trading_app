@@ -17,6 +17,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const productPrice = document.getElementById('productPrice');
     const productUrl = document.getElementById('productUrl');
 
+    // Hebrew mapping for trace step names
+    const stepNameMap = {
+        'search_products': 'חיפוש מוצרים',
+        'get_cheapest_product': 'בחירת המוצר הזול ביותר',
+        'add_to_cart_and_checkout': 'הוספה לעגלה ומעבר לקופה'
+    };
+
+    function translateStepName(name) {
+        return stepNameMap[name] || name;
+    }
+
     tradeForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -87,12 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
         statusSection.classList.remove('hidden');
         resultsSection.classList.remove('hidden');
 
-        // Render trace logs — backend returns flat 'trace' array
+        // Render trace logs with Hebrew step names
         if (data.trace && data.trace.length > 0) {
             traceList.innerHTML = data.trace.map(item => `
                 <li class="trace-item">
-                    <span class="trace-step">${item.step_name}</span>
-                    <span class="trace-time">${item.execution_time ? item.execution_time.toFixed(2) + 's' : '-'}</span>
+                    <span class="trace-step">${translateStepName(item.step_name)}</span>
+                    <span class="trace-time">${item.execution_time ? item.execution_time.toFixed(2) + ' שניות' : '-'}</span>
                 </li>
             `).join('');
         } else {
@@ -100,9 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         successMessage.className = 'success-message';
-        successMessage.textContent = 'האוטומציה הושלמה בהצלחה!';
+        successMessage.textContent = 'התהליך הושלם בהצלחה!';
 
-        // Product data is now at top level of response
         if (data.product) {
             productTitle.textContent = data.product.title || 'מוצר לא ידוע';
             productPrice.textContent = data.product.price || '0';
