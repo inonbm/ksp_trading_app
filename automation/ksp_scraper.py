@@ -2,7 +2,7 @@ import uuid
 import re
 import os
 import logging
-from typing import List
+from typing import List, Optional
 from playwright.async_api import async_playwright
 
 from domain.models import Product
@@ -10,7 +10,7 @@ from domain.models import Product
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-MAX_RETRIES = 3
+MAX_RETRIES = 2
 
 # Spec patterns to extract from product titles
 SPEC_PATTERNS = [
@@ -21,7 +21,7 @@ SPEC_PATTERNS = [
 ]
 
 
-def _extract_specs(title: str) -> str:
+def _extract_specs(title: str) -> Optional[str]:
     """Extract specifications like color, storage, and size from the product title."""
     specs = []
     for pattern, label in SPEC_PATTERNS:
@@ -33,108 +33,107 @@ def _extract_specs(title: str) -> str:
 
 async def search_products(query: str, max_results: int = 10) -> List[Product]:
     """
-    Searches for products on KSP using Playwright and returns a sorted list of Product models.
-    Implements retry/backoff for robustness (Section 4.2).
+    Searches for products on KSP using Playwright. Returns sorted list.
+    Only retries on hard failures (page crash/navigation error), NOT on empty results.
     """
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             result = await _search_products_attempt(query, max_results)
-            if result:
-                # Sort from cheapest to most expensive
-                result.sort(key=lambda p: p.price)
-                return result
-            logger.warning(f"Search attempt {attempt}/{MAX_RETRIES} returned 0 products.")
+            # Sort and return immediately — don't retry if results are empty
+            result.sort(key=lambda p: p.price)
+            return result
         except Exception as e:
             logger.warning(f"Search attempt {attempt}/{MAX_RETRIES} failed: {e}")
-        if attempt < MAX_RETRIES:
-            logger.info("Retrying...")
+            if attempt == MAX_RETRIES:
+                raise
     return []
 
 
 async def _search_products_attempt(query: str, max_results: int) -> List[Product]:
-    """Single attempt to search products."""
+    """Single optimized attempt to search products."""
     products: List[Product] = []
 
     async with async_playwright() as p:
-        headless_mode = os.getenv("PLAYWRIGHT_HEADLESS", "False").lower() == "true"
+        # Default to headless=True for performance; only show browser when explicitly set to False
+        headless_mode = os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() != "false"
         browser = await p.chromium.launch(
             headless=headless_mode,
-            args=["--disable-blink-features=AutomationControlled"]
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-images",       # Don't download images (we only need URLs)
+                "--disable-extensions",
+                "--no-sandbox",
+            ]
         )
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
         )
+        # Set a global timeout of 10 seconds for all Playwright operations
+        context.set_default_timeout(10000)
         page = await context.new_page()
 
         try:
-            url = "https://ksp.co.il/"
-            logger.info(f"[Attempt] Navigating to {url}")
-            await page.goto(url, wait_until="domcontentloaded")
-
+            # Navigate to homepage
+            logger.info(f"Navigating to ksp.co.il...")
+            await page.goto("https://ksp.co.il/", wait_until="domcontentloaded", timeout=10000)
             await page.keyboard.press("Escape")
 
-            # Locate search input
+            # Locate search input — primary with 5s, fallback with 3s
             logger.info("Locating search input...")
             try:
                 search_input = page.get_by_placeholder(re.compile(r"חפש|חיפוש|search", re.IGNORECASE)).first
-                await search_input.wait_for(state="visible", timeout=8000)
+                await search_input.wait_for(state="visible", timeout=5000)
             except Exception:
                 search_input = page.locator('input[type="search"], input[type="text"]').first
-                await search_input.wait_for(state="visible", timeout=8000)
+                await search_input.wait_for(state="visible", timeout=3000)
 
+            # Type fast — 20ms delay instead of 50ms
             await search_input.click()
-            await page.keyboard.type(query, delay=50)
+            await page.keyboard.type(query, delay=20)
             await page.keyboard.press("Enter")
 
-            # Wait for search results page
-            await page.wait_for_load_state("domcontentloaded", timeout=15000)
+            # Wait for results page to load
+            await page.wait_for_load_state("domcontentloaded", timeout=8000)
 
-            # Scroll to trigger lazy-loaded product grid
-            for i in range(4):
-                await page.evaluate("window.scrollBy(0, 500)")
+            # Single rapid scroll to trigger lazy grid
+            await page.evaluate("window.scrollBy(0, 1500)")
 
-            try:
-                await page.wait_for_load_state("networkidle", timeout=5000)
-            except Exception:
-                pass
-
-            # Find product title links — scoped to search results only
+            # Wait for product titles — 10s max
             product_title_selector = 'a[class*="productTitle"]'
             try:
-                await page.wait_for_selector(product_title_selector, timeout=15000)
+                await page.wait_for_selector(product_title_selector, timeout=10000)
             except Exception:
-                logger.error("Product title elements not found.")
+                logger.info("No product titles found. Returning empty results.")
                 return products
 
             title_elements = page.locator(product_title_selector)
             count = await title_elements.count()
-            logger.info(f"Found {count} product title elements.")
+            logger.info(f"Found {count} product titles.")
 
+            # Extract products — batch all attribute reads per product for speed
             for i in range(min(count, max_results)):
                 try:
                     title_el = title_elements.nth(i)
 
-                    # Title
+                    # Parallel-ish: get title + href in quick succession
                     title = (await title_el.inner_text()).strip()
                     if not title or len(title) < 3:
                         continue
 
-                    # URL
                     href = await title_el.get_attribute("href")
                     if not href or "/web/item/" not in href:
                         continue
                     product_url = f"https://ksp.co.il{href}" if href.startswith("/") else href
 
-                    # Image URL — target the specific product image wrapper
-                    # KSP uses class "imageWrapperLink-*" for the product image container
-                    image_url = await _extract_image_url(title_el)
-
-                    # Price
-                    price_float = await _extract_price_from_card(title_el, title)
+                    # Price — fast extraction with 2-level ancestor check
+                    price_float = await _extract_price_fast(title_el, title)
                     if price_float == 0.0:
                         continue
 
-                    # Specs
+                    # Image — fast extraction, single pass
+                    image_url = await _extract_image_fast(title_el)
+
+                    # Specs — pure CPU, no DOM calls
                     specs = _extract_specs(title)
 
                     product = Product(
@@ -161,15 +160,11 @@ async def _search_products_attempt(query: str, max_results: int) -> List[Product
     return products
 
 
-async def _extract_price_from_card(title_el, title_text: str) -> float:
-    """Extract product price by traversing ancestors."""
-    for xpath_expr in [
-        "xpath=ancestor::div[1]",
-        "xpath=ancestor::div[2]",
-        "xpath=ancestor::div[3]",
-    ]:
+async def _extract_price_fast(title_el, title_text: str) -> float:
+    """Fast price extraction — only checks 2 ancestor levels."""
+    for depth in [2, 3]:
         try:
-            ancestor = title_el.locator(xpath_expr)
+            ancestor = title_el.locator(f"xpath=ancestor::div[{depth}]")
             card_text = await ancestor.inner_text()
             price = _parse_price_from_text(card_text, title_text)
             if price > 0:
@@ -197,7 +192,37 @@ def _parse_price_from_text(text: str, title_to_skip: str) -> float:
     return 0.0
 
 
-def _normalize_image_url(url: str) -> str:
+async def _extract_image_fast(title_el) -> Optional[str]:
+    """
+    Fast image extraction — single pass.
+    Targets imageWrapperLink in ancestor, checks src only (no data-src loops).
+    """
+    try:
+        ancestor = title_el.locator("xpath=ancestor::div[3]")
+        img_wrapper = ancestor.locator('a[class*="imageWrapperLink"], div[class*="imageWrapper"]').first
+        img = img_wrapper.locator("img").first
+        src = await img.get_attribute("src")
+        url = _normalize_image_url(src)
+        if _is_valid_product_image(url):
+            return url
+    except Exception:
+        pass
+
+    # Quick fallback: any img in grandparent with product URL pattern
+    try:
+        ancestor = title_el.locator("xpath=ancestor::div[3]")
+        img = ancestor.locator("img").first
+        src = await img.get_attribute("src")
+        url = _normalize_image_url(src)
+        if _is_valid_product_image(url):
+            return url
+    except Exception:
+        pass
+
+    return None
+
+
+def _normalize_image_url(url: str) -> Optional[str]:
     """Normalize a relative or protocol-relative URL to an absolute HTTPS URL."""
     if not url:
         return None
@@ -213,63 +238,6 @@ def _is_valid_product_image(url: str) -> bool:
     """Check that the URL is an actual product image, not a logo or placeholder."""
     if not url:
         return False
-    # Reject common non-product image patterns
-    reject_patterns = ["logo", "placeholder", "blank", "default", "sprite", "icon", "favicon"]
+    reject = ["logo", "placeholder", "blank", "default", "sprite", "icon", "favicon"]
     url_lower = url.lower()
-    return not any(p in url_lower for p in reject_patterns)
-
-
-async def _extract_image_url(title_el) -> str:
-    """
-    Extracts the real product image URL from the product card.
-    KSP uses CSS-module class 'imageWrapperLink-*' for the image container.
-    Images may be lazy-loaded with data-src, srcset, or data-lazy attributes.
-    """
-    # Strategy 1: Find the sibling imageWrapperLink element in the product card
-    try:
-        # Go up to the product card container, then find the image wrapper
-        for depth in range(1, 5):
-            try:
-                ancestor = title_el.locator(f"xpath=ancestor::div[{depth}]")
-                img_wrapper = ancestor.locator('a[class*="imageWrapperLink"], div[class*="imageWrapper"]').first
-                img = img_wrapper.locator("img").first
-                
-                # Try data-src first (lazy-loading), then srcset, then src
-                for attr in ["data-src", "data-lazy", "data-original", "srcset"]:
-                    val = await img.get_attribute(attr)
-                    if val:
-                        # srcset may contain multiple URLs; take the first/largest one
-                        if attr == "srcset":
-                            val = val.split(",")[0].strip().split(" ")[0]
-                        url = _normalize_image_url(val)
-                        if _is_valid_product_image(url):
-                            return url
-
-                # Fallback: use src if it's a real product image
-                src = await img.get_attribute("src")
-                url = _normalize_image_url(src)
-                if _is_valid_product_image(url):
-                    return url
-            except Exception:
-                continue
-    except Exception:
-        pass
-
-    # Strategy 2: Find ANY img in a nearby sibling container with a product-like URL
-    try:
-        for depth in range(1, 4):
-            ancestor = title_el.locator(f"xpath=ancestor::div[{depth}]")
-            imgs = ancestor.locator("img")
-            count = await imgs.count()
-            for j in range(count):
-                img = imgs.nth(j)
-                for attr in ["data-src", "data-lazy", "src"]:
-                    val = await img.get_attribute(attr)
-                    url = _normalize_image_url(val)
-                    if _is_valid_product_image(url) and ("img.ksp" in url or "/item/" in url or "/upload/" in url):
-                        return url
-    except Exception:
-        pass
-
-    return None
-
+    return not any(p in url_lower for p in reject)
