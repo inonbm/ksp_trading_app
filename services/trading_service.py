@@ -2,7 +2,7 @@ import time
 import json
 import logging
 from automation.ksp_scraper import search_products
-from automation.checkout_automation import get_cheapest_product, add_to_cart_and_checkout
+from automation.checkout_automation import get_cheapest_product
 
 # Use a specific logger for Observability outputs
 logger = logging.getLogger("ObservabilityLogger")
@@ -10,8 +10,8 @@ logger = logging.getLogger("ObservabilityLogger")
 
 def log_step(request_id: str, step_name: str, exec_time: float, error: str = None):
     """
-    Helper function to strictly output structured JSON logs for observability.
-    Satisfies Section 5: logs include requestId, step_name, execution_time, error_details.
+    Outputs structured JSON logs for observability.
+    Includes: requestId, step_name, execution_time, error_details.
     """
     log_data = {
         "requestId": request_id,
@@ -24,12 +24,13 @@ def log_step(request_id: str, step_name: str, exec_time: float, error: str = Non
 
 async def run_trading_flow(query: str, request_id: str) -> dict:
     """
-    Full automation flow per Section 4:
-    1. Search products (scrape)
-    2. Select cheapest product
-    3. Add to cart and proceed to checkout
-    4. Fill shipping details
-    5. Take proof screenshot
+    Search-only flow for the storefront UI:
+    1. Search products (scrape KSP)
+    2. Identify the cheapest product
+
+    NOTE: Add-to-cart and checkout are handled separately via /api/checkout
+    when the user clicks "מעבר לרכישה" in the cart drawer.
+    This keeps search fast (~4-6 seconds) and non-blocking.
     """
     trace_details = []
 
@@ -49,7 +50,7 @@ async def run_trading_flow(query: str, request_id: str) -> dict:
     if not products:
         raise ValueError(f"לא נמצאו מוצרים עבור החיפוש: '{query}'")
 
-    # ── Step 2: Select Cheapest Product ──────────────────────────────────────
+    # ── Step 2: Identify Cheapest Product ────────────────────────────────────
     start_time = time.time()
     try:
         cheapest = await get_cheapest_product(products)
@@ -62,23 +63,9 @@ async def run_trading_flow(query: str, request_id: str) -> dict:
         trace_details.append({"step": "get_cheapest_product", "execution_time": exec_time, "status": "failed"})
         raise e
 
-    # ── Step 3: Add to Cart & Checkout ────────────────────────────────────────
-    start_time = time.time()
-    try:
-        await add_to_cart_and_checkout(cheapest)
-        exec_time = time.time() - start_time
-        log_step(request_id, "add_to_cart_and_checkout", exec_time)
-        trace_details.append({"step": "add_to_cart_and_checkout", "execution_time": exec_time, "status": "success"})
-    except Exception as e:
-        exec_time = time.time() - start_time
-        log_step(request_id, "add_to_cart_and_checkout", exec_time, str(e))
-        trace_details.append({"step": "add_to_cart_and_checkout", "execution_time": exec_time, "status": "failed"})
-        # Non-fatal: checkout failure shouldn't hide scraped results
-        logger.warning(f"Checkout step failed (non-fatal): {e}")
-
     return {
-        "products": [p.model_dump() for p in products],   # Full sorted list for the UI catalog
-        "selected_product": cheapest.model_dump(),          # The one that was actually purchased
+        "products": [p.model_dump() for p in products],
+        "selected_product": cheapest.model_dump(),
         "total_found": len(products),
         "order_status": "ממתין לאישור",
         "trace_details": trace_details

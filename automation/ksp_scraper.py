@@ -31,6 +31,21 @@ def _extract_specs(title: str) -> Optional[str]:
     return " | ".join(specs) if specs else None
 
 
+def _is_relevant(title: str, query: str) -> bool:
+    """
+    Returns True if the product title contains at least one meaningful keyword
+    from the search query. Filters out promotional/unrelated items that KSP
+    sometimes injects into search results (e.g., toys, gift cards).
+    Short words (<= 2 chars) are ignored to avoid false negatives.
+    """
+    # Split query into keywords, ignore very short tokens
+    keywords = [k.strip() for k in re.split(r'[\s,]+', query) if len(k.strip()) > 2]
+    if not keywords:
+        return True  # Can't filter — allow all
+    title_lower = title.lower()
+    return any(kw.lower() in title_lower for kw in keywords)
+
+
 async def search_products(query: str, max_results: int = 10) -> List[Product]:
     """
     Searches for products on KSP using Playwright. Returns sorted list.
@@ -39,7 +54,16 @@ async def search_products(query: str, max_results: int = 10) -> List[Product]:
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             result = await _search_products_attempt(query, max_results)
-            # Sort and return immediately — don't retry if results are empty
+
+            # ── Relevance filter ──────────────────────────────────────────────
+            # Reject products whose title has NO keyword from the query.
+            # KSP sometimes injects promoted/unrelated items into the grid.
+            before = len(result)
+            result = [p for p in result if _is_relevant(p.title, query)]
+            filtered = before - len(result)
+            if filtered:
+                logger.info(f"Filtered out {filtered} irrelevant product(s) for query '{query}'")
+
             result.sort(key=lambda p: p.price)
             return result
         except Exception as e:
