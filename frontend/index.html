@@ -5,86 +5,151 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="בוט קניות אוטומטי ל-KSP - חפש מוצרים, השווה מחירים וקנה אוטומטית.">
     <title>בוט קניות KSP | אוטומציה חכמה</title>
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=6">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🛒 בוט קניות KSP</h1>
-            <p>חפש מוצרים, השווה מחירים וקנה ישירות מ-KSP — באופן אוטומטי לחלוטין.</p>
-        </header>
 
-        <main>
-            <!-- ① מסך חיפוש -->
-            <section class="card search-section" id="searchSection">
-                <h2>🔍 מסך חיפוש</h2>
-                <form id="tradeForm">
-                    <div class="form-row">
-                        <div class="form-group flex-grow">
-                            <label for="query">שם המוצר</label>
-                            <input type="text" id="query" name="query"
-                                   placeholder="לדוגמה: אייפון 15, אוזניות, מסך..." required
-                                   autocomplete="off">
-                        </div>
-                        <div class="form-group">
-                            <label for="maxPrice">מחיר מקסימלי (₪)</label>
-                            <input type="number" id="maxPrice" name="max_price"
-                                   placeholder="4000" min="1" required>
-                        </div>
-                    </div>
-                    <button type="submit" id="startBtn" class="btn-primary">
-                        <span>🚀 התחל אוטומציה</span>
-                    </button>
-                </form>
-            </section>
-
-            <!-- ② מסך סטטוס / מעקב -->
-            <section class="card status-section hidden" id="statusSection">
-                <h2>⚙️ מסך סטטוס</h2>
-                <div id="loadingIndicator" class="loading-container">
-                    <div class="spinner"></div>
-                    <p id="loadingMessage">האוטומציה פועלת ברקע... אנא המתן.</p>
-                </div>
-                <div class="trace-container hidden" id="traceContainer">
-                    <h3>יומן ריצה (Trace)</h3>
-                    <ul id="traceList" class="trace-list"></ul>
-                </div>
-            </section>
-
-            <!-- ③ מסך תוצאות / קטלוג -->
-            <section class="catalog-section hidden" id="catalogSection">
-                <div class="catalog-header">
-                    <h2>📦 מסך תוצאות</h2>
-                    <span class="product-count" id="productCount"></span>
-                </div>
-                <div class="product-grid" id="productGrid"></div>
-            </section>
-
-            <!-- ④ מסך קופה / אישור רכישה -->
-            <section class="card checkout-section hidden" id="checkoutSection">
-                <h2>✅ מסך קופה ואישור רכישה</h2>
-                <div class="checkout-content">
-                    <div class="selected-product-card" id="selectedProductCard">
-                        <!-- המוצר שנבחר אוטומטית -->
-                    </div>
-                    <div class="checkout-status" id="checkoutStatus"></div>
-                    <div class="proof-screenshot-container hidden" id="screenshotContainer">
-                        <h3>📸 צילום מסך - אישור הזמנה</h3>
-                        <p class="screenshot-note">הצילום נשמר בשרת כ-<code>proof_screenshot.png</code></p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- שגיאה -->
-            <section class="card error-section hidden" id="errorSection">
-                <div class="error-message" id="errorMessage"></div>
-            </section>
-        </main>
+<!-- ═══════════════════════════════════════════════════════
+     עגלת קניות — פאנל צד קבוע
+═══════════════════════════════════════════════════════ -->
+<div class="cart-overlay hidden" id="cartOverlay"></div>
+<aside class="cart-drawer hidden" id="cartDrawer" aria-label="עגלת קניות">
+    <div class="cart-header">
+        <h2>🛒 עגלת קניות</h2>
+        <button class="cart-close-btn" id="cartCloseBtn" aria-label="סגור עגלה">✕</button>
     </div>
 
-    <script src="app.js?v=5"></script>
+    <!-- רשימת פריטים -->
+    <div class="cart-items" id="cartItems">
+        <div class="cart-empty" id="cartEmpty">
+            <span>🛍️</span>
+            <p>העגלה ריקה</p>
+            <small>הוסף מוצרים מהקטלוג</small>
+        </div>
+    </div>
+
+    <!-- סיכום + טופס פרטים -->
+    <div class="cart-footer" id="cartFooter">
+        <div class="cart-total-row">
+            <span>סה"כ:</span>
+            <strong id="cartTotal">0 ₪</strong>
+        </div>
+
+        <!-- פרטי משתמש למילוי אוטומטי -->
+        <div class="cart-user-details" id="cartUserDetails">
+            <h3>📋 פרטים למילוי אוטומטי</h3>
+            <div class="form-group">
+                <label for="userFullName">שם מלא</label>
+                <input type="text" id="userFullName" placeholder="ישראל ישראלי" autocomplete="name">
+            </div>
+            <div class="form-group">
+                <label for="userPhone">טלפון</label>
+                <input type="tel" id="userPhone" placeholder="050-0000000" autocomplete="tel">
+            </div>
+            <div class="form-group">
+                <label for="userEmail">אימייל</label>
+                <input type="email" id="userEmail" placeholder="you@example.com" autocomplete="email">
+            </div>
+            <div class="form-row">
+                <div class="form-group flex-grow">
+                    <label for="userCity">עיר</label>
+                    <input type="text" id="userCity" placeholder="תל אביב" autocomplete="address-level2">
+                </div>
+                <div class="form-group flex-grow">
+                    <label for="userStreet">רחוב ומספר</label>
+                    <input type="text" id="userStreet" placeholder="הרצל 1" autocomplete="street-address">
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-checkout" id="checkoutBtn" disabled>
+            <span>🚀 מעבר לרכישה ב-KSP</span>
+        </button>
+        <button class="btn-clear-cart" id="clearCartBtn">
+            🗑️ רוקן עגלה
+        </button>
+    </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════
+     כפתור עגלה צף
+═══════════════════════════════════════════════════════ -->
+<button class="cart-fab" id="cartFab" aria-label="פתח עגלת קניות">
+    🛒
+    <span class="cart-badge hidden" id="cartBadge">0</span>
+</button>
+
+<!-- ═══════════════════════════════════════════════════════
+     תוכן ראשי
+═══════════════════════════════════════════════════════ -->
+<div class="container">
+    <header>
+        <h1>🛒 בוט קניות KSP</h1>
+        <p>חפש מוצרים, הוסף לעגלה וקנה ישירות מ-KSP — עם מילוי פרטים אוטומטי.</p>
+    </header>
+
+    <main>
+        <!-- ① מסך חיפוש -->
+        <section class="card search-section" id="searchSection">
+            <h2>🔍 חיפוש מוצרים</h2>
+            <form id="tradeForm">
+                <div class="form-row">
+                    <div class="form-group flex-grow">
+                        <label for="query">שם המוצר</label>
+                        <input type="text" id="query" name="query"
+                               placeholder="לדוגמה: אייפון 15, אוזניות, מסך..." required
+                               autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="maxPrice">מחיר מקסימלי (₪)</label>
+                        <input type="number" id="maxPrice" name="max_price"
+                               placeholder="4000" min="1" required>
+                    </div>
+                </div>
+                <button type="submit" id="startBtn" class="btn-primary">
+                    <span>🔍 חפש מוצרים</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- ② מסך סטטוס -->
+        <section class="card status-section hidden" id="statusSection">
+            <h2>⚙️ סטטוס חיפוש</h2>
+            <div id="loadingIndicator" class="loading-container">
+                <div class="spinner"></div>
+                <p id="loadingMessage">סורק את KSP... אנא המתן.</p>
+            </div>
+            <div class="trace-container hidden" id="traceContainer">
+                <h3>יומן ריצה</h3>
+                <ul id="traceList" class="trace-list"></ul>
+            </div>
+        </section>
+
+        <!-- ③ מסך תוצאות / קטלוג -->
+        <section class="catalog-section hidden" id="catalogSection">
+            <div class="catalog-header">
+                <h2>📦 תוצאות חיפוש</h2>
+                <span class="product-count" id="productCount"></span>
+            </div>
+            <div class="product-grid" id="productGrid"></div>
+        </section>
+
+        <!-- ④ מסך סטטוס רכישה -->
+        <section class="card checkout-result-section hidden" id="checkoutResultSection">
+            <h2>✅ סטטוס רכישה</h2>
+            <div id="checkoutResultContent"></div>
+        </section>
+
+        <!-- שגיאה -->
+        <section class="card error-section hidden" id="errorSection">
+            <div class="error-message" id="errorMessage"></div>
+        </section>
+    </main>
+</div>
+
+<script src="app.js?v=6"></script>
 </body>
 </html>
