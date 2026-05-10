@@ -153,21 +153,38 @@ document.addEventListener('DOMContentLoaded', () => {
     clearCartBtn.addEventListener('click', clearCart);
 
     /* ══════════════════════════════════════════════
-       Checkout — send to backend → Playwright
+       Checkout — validate → send to backend → Playwright
     ══════════════════════════════════════════════ */
     checkoutBtn.addEventListener('click', async () => {
         if (cart.length === 0) return;
 
+        // ── Validate required fields ────────────────────────────────────────
+        const requiredFields = [
+            { el: userFullName, label: 'שם מלא' },
+            { el: userPhone,    label: 'טלפון' },
+            { el: userEmail,    label: 'אימייל' },
+            { el: userCity,     label: 'עיר' },
+            { el: userStreet,   label: 'רחוב ומספר' },
+        ];
+        requiredFields.forEach(f => f.el.classList.remove('input-error'));
+        const missing = requiredFields.filter(f => !f.el.value.trim());
+        if (missing.length > 0) {
+            missing.forEach(f => f.el.classList.add('input-error'));
+            missing[0].el.focus();
+            return;
+        }
+
         const userDetails = {
-            full_name: userFullName.value.trim() || 'ישראל ישראלי',
-            phone:     userPhone.value.trim()    || '0501234567',
-            email:     userEmail.value.trim()    || 'test@example.com',
-            city:      userCity.value.trim()     || 'תל אביב',
-            street:    userStreet.value.trim()   || 'הרצל 1',
+            full_name: userFullName.value.trim(),
+            phone:     userPhone.value.trim(),
+            email:     userEmail.value.trim(),
+            city:      userCity.value.trim(),
+            street:    userStreet.value.trim(),
         };
 
         checkoutBtn.disabled = true;
-        checkoutBtn.innerHTML = '<span>⏳ מבצע רכישה...</span>';
+        checkoutBtn.innerHTML = '<span>⏳ האוטומציה פועלת... אנא המתן</span>';
+
 
         try {
             const resp = await fetch('http://localhost:8000/api/checkout', {

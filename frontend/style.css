@@ -344,6 +344,23 @@ button:disabled { opacity:.58; cursor:not-allowed; transform:none !important; }
 }
 .btn-clear-cart:hover { border-color:var(--error); color:var(--error); }
 
+/* Required field indicators */
+.req          { color:var(--error); margin-right:.15rem; }
+.required-note { font-size:.75rem; font-weight:500; color:var(--muted); margin-right:.5rem; }
+
+/* Input error state */
+.input-error {
+    border-color:var(--error) !important;
+    box-shadow:0 0 0 3px rgba(220,38,38,.15) !important;
+    animation:shake .3s ease;
+}
+@keyframes shake {
+    0%,100% { transform:translateX(0); }
+    25%      { transform:translateX(-4px); }
+    75%      { transform:translateX(4px); }
+}
+
+
 /* ════════════════════════════════════════════════════════
    Checkout result section
 ════════════════════════════════════════════════════════ */

@@ -40,27 +40,33 @@
 
         <!-- פרטי משתמש למילוי אוטומטי -->
         <div class="cart-user-details" id="cartUserDetails">
-            <h3>📋 פרטים למילוי אוטומטי</h3>
+            <h3>📋 פרטי משלוח <span class="required-note">* שדות חובה</span></h3>
             <div class="form-group">
-                <label for="userFullName">שם מלא</label>
-                <input type="text" id="userFullName" placeholder="ישראל ישראלי" autocomplete="name">
+                <label for="userFullName">שם מלא <span class="req">*</span></label>
+                <input type="text" id="userFullName" placeholder="ישראל ישראלי"
+                       autocomplete="name" required>
             </div>
             <div class="form-group">
-                <label for="userPhone">טלפון</label>
-                <input type="tel" id="userPhone" placeholder="050-0000000" autocomplete="tel">
+                <label for="userPhone">טלפון <span class="req">*</span></label>
+                <input type="tel" id="userPhone" placeholder="050-0000000"
+                       autocomplete="tel" required
+                       pattern="[0-9\-\+]{9,15}">
             </div>
             <div class="form-group">
-                <label for="userEmail">אימייל</label>
-                <input type="email" id="userEmail" placeholder="you@example.com" autocomplete="email">
+                <label for="userEmail">אימייל <span class="req">*</span></label>
+                <input type="email" id="userEmail" placeholder="you@example.com"
+                       autocomplete="email" required>
             </div>
             <div class="form-row">
                 <div class="form-group flex-grow">
-                    <label for="userCity">עיר</label>
-                    <input type="text" id="userCity" placeholder="תל אביב" autocomplete="address-level2">
+                    <label for="userCity">עיר <span class="req">*</span></label>
+                    <input type="text" id="userCity" placeholder="תל אביב"
+                           autocomplete="address-level2" required>
                 </div>
                 <div class="form-group flex-grow">
-                    <label for="userStreet">רחוב ומספר</label>
-                    <input type="text" id="userStreet" placeholder="הרצל 1" autocomplete="street-address">
+                    <label for="userStreet">רחוב ומספר <span class="req">*</span></label>
+                    <input type="text" id="userStreet" placeholder="הרצל 1"
+                           autocomplete="street-address" required>
                 </div>
             </div>
         </div>
