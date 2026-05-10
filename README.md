@@ -1,19 +1,43 @@
-# KSP Trading App
+# KSP Trading App — מערכת קניות אוטומטית
 
-A fully automated web trading application that scrapes product data from KSP, selects the cheapest matching product, and automates the checkout process using Playwright.
+מערכת Web Automation שמבצעת סריקה של מוצרים מאתר KSP, בוחרת את המוצר הזול ביותר, מוסיפה אותו לעגלת הקניות, ומצלמת מסך של דף הרכישה כהוכחת ביצוע.
 
-## Architecture Overview
-The application strictly follows a layered architecture to ensure separation of concerns:
-- **`frontend`**: A Vanilla HTML/JS/CSS client offering a modern RTL Hebrew interface for interacting with the backend.
-- **`api`**: A FastAPI layer exposing the REST endpoints (e.g., `POST /api/trade`).
-- **`services`**: The core business logic orchestrating the steps (`run_trading_flow`).
-- **`domain`**: Pydantic models (`Product`, `Cart`, `Order`) strictly enforcing data normalization and validation.
-- **`automation`**: Playwright scripts responsible for interacting with the external KSP website (scraping and checkout).
+---
 
-## Setup and Run Instructions
+## ארכיטקטורה (Layered Architecture)
 
-### 1. Backend Setup
-Activate your Python virtual environment (if using one) and install dependencies:
+```
+frontend/          ← UI (HTML/CSS/JS) — 4 מסכים: חיפוש, סטטוס, תוצאות, קופה
+api/               ← FastAPI — endpoint: POST /api/trade
+services/          ← לוגיקה עסקית — תזמור השלבים + Observability logs
+domain/            ← Pydantic models: Product, Cart, Order
+automation/        ← Playwright — scraping + checkout + screenshot
+tests/             ← pytest — unit tests + E2E tests
+```
+
+**עיקרון מרכזי:** כל הנתונים מגיעים מ-Scraping בלבד — ללא APIs חיצוניים.
+
+---
+
+## זרימת האוטומציה
+
+```
+1. פתיחת דפדפן (headless) ← PLAYWRIGHT_HEADLESS=true
+2. ניווט לדף הבית של KSP
+3. חיפוש לפי שאילתת המשתמש (הדמיית הקלדה אנושית)
+4. איסוף תוצאות מה-DOM: id, title, price, currency, url, source, image_url, specs
+5. בחירת המוצר הזול ביותר (get_cheapest_product)
+6. הוספה לעגלת הקניות
+7. מעבר לעמוד התשלום
+8. מילוי פרטי משלוח
+9. צילום מסך → proof_screenshot.png
+```
+
+---
+
+## התקנה והרצה
+
+### דרישות מקדימות
 ```bash
 python3 -m venv venv
 source venv/bin/activate
@@ -21,29 +45,67 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-Run the FastAPI backend server:
+### הרצת הבאקנד (FastAPI)
 ```bash
 uvicorn api.main:app --reload
+# זמין בכתובת: http://localhost:8000
 ```
-*(The backend will be available at `http://localhost:8000`)*
 
-### 2. Frontend Setup
-In a new terminal window, serve the static frontend files:
+### הרצת הפרונטאנד (Vanilla JS)
 ```bash
 cd frontend
 python3 -m http.server 8080
+# פתח http://localhost:8080
 ```
-*(Access the web app at `http://localhost:8080`)*
 
-## Testing
-The project includes a comprehensive `pytest` suite covering unit and end-to-end flows.
-To run the tests, execute:
+---
+
+## משתני סביבה
+
+| משתנה | ברירת מחדל | תיאור |
+|-------|-----------|-------|
+| `PLAYWRIGHT_HEADLESS` | `true` | הרץ `false` לראות את הדפדפן בפעולה |
+
+---
+
+## הרצת הבדיקות
+
 ```bash
-pytest -v
+# כל הבדיקות (unit + E2E):
+PLAYWRIGHT_HEADLESS=true pytest -v
+
+# בדיקות יחידה בלבד:
+pytest tests/test_domain_and_services.py -v
+
+# E2E:
+pytest tests/test_e2e_flow.py -v
+
+# סוויטת 50 קטגוריות (ייקח ~10 דקות):
+PLAYWRIGHT_HEADLESS=true pytest tests/test_50_categories.py -v
 ```
 
-## Automation Flow
-1. **Navigate & Search**: Playwright navigates to KSP's homepage and emulates human typing to submit the query.
-2. **Select Cheapest**: The system extracts all search results, normalizes them via Pydantic, and identifies the cheapest item within the max price constraint.
-3. **Add to Cart**: Automates clicking the "Add to Cart" and "Proceed to Checkout" buttons.
-4. **Capture Proof**: Generates a `proof_screenshot.png` of the cart to verify successful execution.
+---
+
+## פלט הבדיקות (Test Output)
+
+```
+8 passed in 0.09s
+- test_product_model_validation         PASSED
+- test_product_with_image_and_specs     PASSED
+- test_product_currency_normalization   PASSED
+- test_get_cheapest_product             PASSED
+- test_get_cheapest_product_empty_list  PASSED
+- test_cart_total_price                 PASSED
+- test_cart_empty                       PASSED
+- test_full_automation_flow             PASSED (כולל proof_screenshot.png)
+```
+
+ראה גם: `50_products_test_report.md` — 50/50 קטגוריות עברו בהצלחה.
+
+---
+
+## אבטחה (Security)
+
+- `.gitignore` חוסם: `venv/`, `.env`, `__pycache__/`, `proof_screenshot.png`
+- אין API keys בקוד
+- כל הנתונים מ-Scraping בלבד

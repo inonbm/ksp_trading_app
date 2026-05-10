@@ -17,23 +17,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class TradeRequest(BaseModel):
     """Input validation for the trade request from the UI (Section 4.2)."""
     query: str = Field(..., min_length=1, description="Product search query")
     max_price: float = Field(default=None, ge=0, description="Optional maximum price filter in ILS")
 
+
 @app.post("/api/trade")
 async def trade_endpoint(request: TradeRequest):
     """
-    Receives a trade request from the UI, triggers the scraping flow,
-    and returns the full sorted product catalog for storefront display.
+    Full automation endpoint:
+    Scrape → Select Cheapest → Add to Cart → Checkout → Screenshot.
+    Returns catalog list + selected product + trace for UI display.
     """
     request_id = str(uuid.uuid4())
 
     try:
         result = await run_trading_flow(query=request.query, request_id=request_id)
 
-        # Filter by max_price if provided
+        # Apply max_price filter to catalog if provided
         products = result.get("products", [])
         if request.max_price is not None:
             products = [p for p in products if p["price"] <= request.max_price]
@@ -42,7 +45,9 @@ async def trade_endpoint(request: TradeRequest):
             "status": "success",
             "requestId": request_id,
             "products": products,
+            "selected_product": result.get("selected_product"),
             "total_found": len(products),
+            "order_status": result.get("order_status"),
             "trace": [
                 {
                     "step_name": step["step"],

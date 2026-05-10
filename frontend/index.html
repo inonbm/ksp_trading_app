@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>בוט קניות KSP</title>
-    <link rel="stylesheet" href="style.css?v=4">
+    <meta name="description" content="בוט קניות אוטומטי ל-KSP - חפש מוצרים, השווה מחירים וקנה אוטומטית.">
+    <title>בוט קניות KSP | אוטומציה חכמה</title>
+    <link rel="stylesheet" href="style.css?v=5">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
@@ -13,58 +14,77 @@
     <div class="container">
         <header>
             <h1>🛒 בוט קניות KSP</h1>
-            <p>חפש מוצרים, השווה מחירים וקנה ישירות מ-KSP.</p>
+            <p>חפש מוצרים, השווה מחירים וקנה ישירות מ-KSP — באופן אוטומטי לחלוטין.</p>
         </header>
 
         <main>
-            <section class="card search-section">
-                <h2>חיפוש מוצרים</h2>
+            <!-- ① מסך חיפוש -->
+            <section class="card search-section" id="searchSection">
+                <h2>🔍 מסך חיפוש</h2>
                 <form id="tradeForm">
                     <div class="form-row">
                         <div class="form-group flex-grow">
                             <label for="query">שם המוצר</label>
-                            <input type="text" id="query" name="query" placeholder="לדוגמה: אייפון 15, אוזניות, מסך..." required>
+                            <input type="text" id="query" name="query"
+                                   placeholder="לדוגמה: אייפון 15, אוזניות, מסך..." required
+                                   autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="maxPrice">מחיר מקסימלי (₪)</label>
-                            <input type="number" id="maxPrice" name="max_price" placeholder="4000" min="1" required>
+                            <input type="number" id="maxPrice" name="max_price"
+                                   placeholder="4000" min="1" required>
                         </div>
                     </div>
                     <button type="submit" id="startBtn" class="btn-primary">
-                        <span>🔍 חפש מוצרים</span>
+                        <span>🚀 התחל אוטומציה</span>
                     </button>
                 </form>
             </section>
 
-            <!-- Loading / Trace -->
+            <!-- ② מסך סטטוס / מעקב -->
             <section class="card status-section hidden" id="statusSection">
+                <h2>⚙️ מסך סטטוס</h2>
                 <div id="loadingIndicator" class="loading-container">
                     <div class="spinner"></div>
-                    <p id="loadingMessage">סורק את KSP... אנא המתן.</p>
+                    <p id="loadingMessage">האוטומציה פועלת ברקע... אנא המתן.</p>
                 </div>
                 <div class="trace-container hidden" id="traceContainer">
+                    <h3>יומן ריצה (Trace)</h3>
                     <ul id="traceList" class="trace-list"></ul>
                 </div>
             </section>
 
-            <!-- Product Catalog Grid -->
+            <!-- ③ מסך תוצאות / קטלוג -->
             <section class="catalog-section hidden" id="catalogSection">
                 <div class="catalog-header">
-                    <h2 id="catalogTitle">תוצאות חיפוש</h2>
+                    <h2>📦 מסך תוצאות</h2>
                     <span class="product-count" id="productCount"></span>
                 </div>
-                <div class="product-grid" id="productGrid">
-                    <!-- Product cards will be dynamically inserted -->
+                <div class="product-grid" id="productGrid"></div>
+            </section>
+
+            <!-- ④ מסך קופה / אישור רכישה -->
+            <section class="card checkout-section hidden" id="checkoutSection">
+                <h2>✅ מסך קופה ואישור רכישה</h2>
+                <div class="checkout-content">
+                    <div class="selected-product-card" id="selectedProductCard">
+                        <!-- המוצר שנבחר אוטומטית -->
+                    </div>
+                    <div class="checkout-status" id="checkoutStatus"></div>
+                    <div class="proof-screenshot-container hidden" id="screenshotContainer">
+                        <h3>📸 צילום מסך - אישור הזמנה</h3>
+                        <p class="screenshot-note">הצילום נשמר בשרת כ-<code>proof_screenshot.png</code></p>
+                    </div>
                 </div>
             </section>
 
-            <!-- Error -->
+            <!-- שגיאה -->
             <section class="card error-section hidden" id="errorSection">
                 <div class="error-message" id="errorMessage"></div>
             </section>
         </main>
     </div>
 
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>
