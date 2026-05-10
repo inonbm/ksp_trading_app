@@ -125,16 +125,9 @@ async def _search_products_attempt(query: str, max_results: int) -> List[Product
                         continue
                     product_url = f"https://ksp.co.il{href}" if href.startswith("/") else href
 
-                    # Image URL — find nearby img element in the product card
-                    image_url = None
-                    try:
-                        card = title_el.locator("xpath=ancestor::div[.//img]").first
-                        img = card.locator("img").first
-                        image_url = await img.get_attribute("src")
-                        if image_url and image_url.startswith("//"):
-                            image_url = f"https:{image_url}"
-                    except Exception:
-                        pass
+                    # Image URL — target the specific product image wrapper
+                    # KSP uses class "imageWrapperLink-*" for the product image container
+                    image_url = await _extract_image_url(title_el)
 
                     # Price
                     price_float = await _extract_price_from_card(title_el, title)
@@ -202,3 +195,81 @@ def _parse_price_from_text(text: str, title_to_skip: str) -> float:
             except ValueError:
                 continue
     return 0.0
+
+
+def _normalize_image_url(url: str) -> str:
+    """Normalize a relative or protocol-relative URL to an absolute HTTPS URL."""
+    if not url:
+        return None
+    url = url.strip()
+    if url.startswith("//"):
+        return f"https:{url}"
+    if url.startswith("/"):
+        return f"https://ksp.co.il{url}"
+    return url
+
+
+def _is_valid_product_image(url: str) -> bool:
+    """Check that the URL is an actual product image, not a logo or placeholder."""
+    if not url:
+        return False
+    # Reject common non-product image patterns
+    reject_patterns = ["logo", "placeholder", "blank", "default", "sprite", "icon", "favicon"]
+    url_lower = url.lower()
+    return not any(p in url_lower for p in reject_patterns)
+
+
+async def _extract_image_url(title_el) -> str:
+    """
+    Extracts the real product image URL from the product card.
+    KSP uses CSS-module class 'imageWrapperLink-*' for the image container.
+    Images may be lazy-loaded with data-src, srcset, or data-lazy attributes.
+    """
+    # Strategy 1: Find the sibling imageWrapperLink element in the product card
+    try:
+        # Go up to the product card container, then find the image wrapper
+        for depth in range(1, 5):
+            try:
+                ancestor = title_el.locator(f"xpath=ancestor::div[{depth}]")
+                img_wrapper = ancestor.locator('a[class*="imageWrapperLink"], div[class*="imageWrapper"]').first
+                img = img_wrapper.locator("img").first
+                
+                # Try data-src first (lazy-loading), then srcset, then src
+                for attr in ["data-src", "data-lazy", "data-original", "srcset"]:
+                    val = await img.get_attribute(attr)
+                    if val:
+                        # srcset may contain multiple URLs; take the first/largest one
+                        if attr == "srcset":
+                            val = val.split(",")[0].strip().split(" ")[0]
+                        url = _normalize_image_url(val)
+                        if _is_valid_product_image(url):
+                            return url
+
+                # Fallback: use src if it's a real product image
+                src = await img.get_attribute("src")
+                url = _normalize_image_url(src)
+                if _is_valid_product_image(url):
+                    return url
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # Strategy 2: Find ANY img in a nearby sibling container with a product-like URL
+    try:
+        for depth in range(1, 4):
+            ancestor = title_el.locator(f"xpath=ancestor::div[{depth}]")
+            imgs = ancestor.locator("img")
+            count = await imgs.count()
+            for j in range(count):
+                img = imgs.nth(j)
+                for attr in ["data-src", "data-lazy", "src"]:
+                    val = await img.get_attribute(attr)
+                    url = _normalize_image_url(val)
+                    if _is_valid_product_image(url) and ("img.ksp" in url or "/item/" in url or "/upload/" in url):
+                        return url
+    except Exception:
+        pass
+
+    return None
+
